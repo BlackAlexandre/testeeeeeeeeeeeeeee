@@ -1,0 +1,200 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(CLIENT)
+  phone        String?
+  cpf          String?  @unique
+  points       Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relações
+  reservations        Reservation[]
+  eventRegistrations  EventRegistration[]
+  planSubscriptions   PlanSubscription[]
+
+  @@map("users")
+}
+
+model Machine {
+  id       String   @id @default(cuid())
+  name     String
+  type     MachineType
+  spec     String
+  isActive Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  // Relações
+  reservations Reservation[]
+
+  @@map("machines")
+}
+
+model Game {
+  id          String   @id @default(cuid())
+  title       String
+  platform    String
+  genre       String
+  coverUrl    String?
+  description String?
+  tags        String   // JSON string de tags
+  createdAt   DateTime @default(now())
+
+  // Relações
+  events Event[]
+
+  @@map("games")
+}
+
+model Reservation {
+  id        String   @id @default(cuid())
+  userId    String
+  machineId String
+  date      DateTime
+  startTime String
+  endTime   String
+  status    ReservationStatus @default(PENDING)
+  createdAt DateTime @default(now())
+
+  // Relações
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  machine Machine @relation(fields: [machineId], references: [id])
+
+  @@map("reservations")
+}
+
+model Event {
+  id             String   @id @default(cuid())
+  name           String
+  bannerUrl      String?
+  gameTitle      String
+  description    String
+  location       String
+  startAt        DateTime
+  endAt          DateTime
+  prize          String
+  rulesUrl       String?
+  slots          Int
+  registeredCount Int     @default(0)
+  createdAt      DateTime @default(now())
+
+  // Relações
+  gameTitleRef Game? @relation(fields: [gameTitle], references: [title])
+  registrations EventRegistration[]
+
+  @@map("events")
+}
+
+model EventRegistration {
+  id      String @id @default(cuid())
+  userId  String
+  eventId String
+  createdAt DateTime @default(now())
+
+  // Relações
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@map("event_registrations")
+}
+
+model Plan {
+  id            String   @id @default(cuid())
+  name          String
+  price         Float
+  perks         String   // JSON string de perks
+  hoursComputer Int
+  hoursConsole  Int
+  printsBW      Int
+  printsColor   Int
+  companions    Int
+  priorityAccess Boolean @default(false)
+  isPremium     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  // Relações
+  subscriptions PlanSubscription[]
+
+  @@map("plans")
+}
+
+model PlanSubscription {
+  id       String   @id @default(cuid())
+  userId   String
+  planId   String
+  startDate DateTime @default(now())
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  // Relações
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@map("plan_subscriptions")
+}
+
+model Coupon {
+  id       String   @id @default(cuid())
+  code     String   @unique
+  percent  Int
+  maxUses  Int?
+  usedCount Int     @default(0)
+  expiresAt DateTime?
+  active   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("coupons")
+}
+
+model GalleryImage {
+  id       String   @id @default(cuid())
+  title    String
+  url      String
+  category GalleryCategory
+  createdAt DateTime @default(now())
+
+  @@map("gallery_images")
+}
+
+// Enums
+enum Role {
+  CLIENT
+  ADMIN
+}
+
+enum MachineType {
+  PC
+  PS5
+  XBOX
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum GalleryCategory {
+  LOCAL
+  EVENT
+  GAME
+}
+
+
